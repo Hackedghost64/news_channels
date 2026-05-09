@@ -17,6 +17,7 @@ class VideoPlayerWidget extends StatefulWidget {
     required this.onPreviousChannel,
     required this.onNextChannel,
     required this.onShowChannelGuide,
+    this.onPlaybackUnavailable,
   });
 
   final Channel channel;
@@ -25,6 +26,7 @@ class VideoPlayerWidget extends StatefulWidget {
   final VoidCallback onPreviousChannel;
   final VoidCallback onNextChannel;
   final VoidCallback onShowChannelGuide;
+  final ValueChanged<String>? onPlaybackUnavailable;
 
   @override
   State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
@@ -41,6 +43,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   bool _showControls = true;
   bool _isPlaying = false;
   bool _isMuted = false;
+  bool _hasReportedPlaybackUnavailable = false;
 
   @override
   void initState() {
@@ -54,6 +57,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     if (oldWidget.channel.url != widget.channel.url ||
         oldWidget.streamUrl != widget.streamUrl ||
         oldWidget.headers.toString() != widget.headers.toString()) {
+      _hasReportedPlaybackUnavailable = false;
       _initializePlayer();
     }
   }
@@ -78,6 +82,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         _isLoading = true;
         _showControls = true;
       });
+      _hasReportedPlaybackUnavailable = false;
     }
 
     try {
@@ -144,6 +149,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             _isLoading = false;
             _showControls = true;
           });
+          _reportPlaybackUnavailableIfNeeded(_error!);
         });
 
         await player.open(
@@ -171,6 +177,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         _isLoading = false;
         _showControls = true;
       });
+      _reportPlaybackUnavailableIfNeeded(_error!);
     }
   }
 
@@ -203,8 +210,17 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           value.errorDescription ?? 'Unknown web playback error',
         );
         _showControls = true;
+        _reportPlaybackUnavailableIfNeeded(_error!);
       }
     });
+  }
+
+  void _reportPlaybackUnavailableIfNeeded(String message) {
+    if (_hasReportedPlaybackUnavailable) {
+      return;
+    }
+    _hasReportedPlaybackUnavailable = true;
+    widget.onPlaybackUnavailable?.call(message);
   }
 
   String _formatPlaybackError(String message) {

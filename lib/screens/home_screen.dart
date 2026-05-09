@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -36,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final FocusNode _keyboardFocusNode = FocusNode(debugLabel: 'home_keyboard');
   final List<FocusNode> _channelFocusNodes = <FocusNode>[];
 
+  Timer? _channelNoticeTimer;
+  String? _channelNotice;
   bool _showChannelGuide = true;
   int _focusedIndex = 0;
 
@@ -51,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _channelNoticeTimer?.cancel();
     for (final node in _channelFocusNodes) {
       node.dispose();
     }
@@ -131,6 +135,49 @@ class _HomeScreenState extends State<HomeScreen> {
       target,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _showChannelNotice(String message) {
+    _channelNoticeTimer?.cancel();
+    setState(() {
+      _channelNotice = message;
+    });
+    _channelNoticeTimer = Timer(const Duration(seconds: 4), () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _channelNotice = null;
+      });
+    });
+  }
+
+  void _handlePlaybackUnavailable(ChannelProvider provider, Channel channel) {
+    final normalizedName = channel.name.toLowerCase();
+    if (!normalizedName.contains('aaj tak')) {
+      return;
+    }
+
+    final ndtvIndex = provider.channels.indexWhere(
+      (item) => item.name.toLowerCase().contains('ndtv'),
+    );
+    if (ndtvIndex == -1) {
+      return;
+    }
+
+    final fallbackChannel = provider.channels[ndtvIndex];
+    if (provider.selectedChannel?.url == fallbackChannel.url) {
+      _showChannelNotice(
+        'Aaj Tak is taking a short break. Switched to NDTV for now.',
+      );
+      return;
+    }
+
+    provider.selectChannelAt(ndtvIndex);
+    _hideGuide();
+    _showChannelNotice(
+      'Aaj Tak is taking a short break. Switched to NDTV for now.',
     );
   }
 
@@ -315,12 +362,46 @@ class _HomeScreenState extends State<HomeScreen> {
           onPreviousChannel: provider.selectPreviousChannel,
           onNextChannel: provider.selectNextChannel,
           onShowChannelGuide: () => _showGuide(provider),
+          onPlaybackUnavailable: (_) =>
+              _handlePlaybackUnavailable(provider, channel),
         );
 
     return Stack(
       fit: StackFit.expand,
       children: [
         player,
+        if (_channelNotice != null)
+          Positioned(
+            top: 96,
+            left: 20,
+            right: 20,
+            child: Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.76),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  child: Text(
+                    _channelNotice!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         Positioned(
           left: 20,
           bottom: 20,
