@@ -1,7 +1,7 @@
 [
   {
     "name": "Aaj Tak HD",
-    "url": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
+    "url": "https://livehub-voidnet.onrender.com/cluster/streamcore/in/AAJTAK_REDIS.m3u8",
     "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/aaj_tak.png"
   },
   {
