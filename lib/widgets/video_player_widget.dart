@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import '../models/channel.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
-  final String url;
-  final String channelName;
+  final Channel channel;
 
   const VideoPlayerWidget({
     super.key,
-    required this.url,
-    required this.channelName,
+    required this.channel,
   });
 
   @override
@@ -28,7 +27,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     _player = Player(
       configuration: const PlayerConfiguration(
         muted: false,
-        bufferSize: 1024 * 1024 * 10, // 10MB buffer
       ),
     );
     _controller = VideoController(_player);
@@ -49,7 +47,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
 
     _player.stream.buffering.listen((buffering) {
-      debugPrint('MEDIA_KIT_BUFFERING: $buffering');
       if (mounted) {
         setState(() {
           _buffering = buffering;
@@ -58,9 +55,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
 
     _player.stream.completed.listen((completed) {
-      debugPrint('MEDIA_KIT_COMPLETED: $completed');
       if (completed && mounted) {
-        _play(); // Auto-restart if it ends
+        _play(); 
       }
     });
     
@@ -70,15 +66,14 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   }
 
   void _play() {
-    if (widget.url.isNotEmpty) {
-      debugPrint('MEDIA_KIT_PLAYING: ${widget.url}');
+    final url = widget.channel.streamUrl;
+    if (url.isNotEmpty) {
+      debugPrint('MEDIA_KIT_PLAYING: $url');
       setState(() {
         _error = null;
         _buffering = true;
       });
-      _player.open(Media(widget.url)).then((_) {
-        debugPrint('MEDIA_KIT_OPEN_SUCCESS');
-      }).catchError((e) {
+      _player.open(Media(url)).catchError((e) {
         debugPrint('MEDIA_KIT_OPEN_ERROR: $e');
         if (mounted) {
           setState(() {
@@ -93,7 +88,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   @override
   void didUpdateWidget(VideoPlayerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
+    if (oldWidget.channel.url != widget.channel.url) {
       _play();
     }
   }
@@ -110,7 +105,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       color: Colors.black,
       child: Stack(
         children: [
-          if (widget.url.isNotEmpty && _error == null)
+          if (widget.channel.url.isNotEmpty && _error == null)
             Video(
               controller: _controller,
               fill: Colors.black,
@@ -146,7 +141,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
               ),
             ),
 
-          if (widget.url.isEmpty)
+          if (widget.channel.url.isEmpty)
             const Center(
               child: Text(
                 'Waiting for stream link...',

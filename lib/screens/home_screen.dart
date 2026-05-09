@@ -143,8 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: GestureDetector(
                       onTap: _toggleOverlay,
                       child: VideoPlayerWidget(
-                        url: provider.selectedChannel!.url,
-                        channelName: provider.selectedChannel!.name,
+                        channel: provider.selectedChannel!,
                       ),
                     ),
                   ),

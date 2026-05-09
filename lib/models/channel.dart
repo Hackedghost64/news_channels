@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class Channel {
   final String name;
   final String url;
@@ -8,6 +10,14 @@ class Channel {
     required this.url,
     required this.logo,
   });
+
+  String get streamUrl {
+    if (kIsWeb && url.isNotEmpty) {
+      // Use a CORS proxy for web debugging
+      return 'https://corsproxy.io/?' + Uri.encodeComponent(url);
+    }
+    return url;
+  }
 
   factory Channel.fromJson(Map<String, dynamic> json) {
     return Channel(
