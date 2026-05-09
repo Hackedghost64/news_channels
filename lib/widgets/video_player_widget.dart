@@ -39,6 +39,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   void _setupListeners() {
     _player.stream.error.listen((error) {
+      debugPrint('MEDIA_KIT_ERROR: $error');
       if (mounted) {
         setState(() {
           _error = error;
@@ -48,6 +49,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
 
     _player.stream.buffering.listen((buffering) {
+      debugPrint('MEDIA_KIT_BUFFERING: $buffering');
       if (mounted) {
         setState(() {
           _buffering = buffering;
@@ -56,23 +58,34 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
 
     _player.stream.completed.listen((completed) {
+      debugPrint('MEDIA_KIT_COMPLETED: $completed');
       if (completed && mounted) {
         _play(); // Auto-restart if it ends
       }
+    });
+    
+    _player.stream.status.listen((status) {
+      debugPrint('MEDIA_KIT_STATUS: $status');
     });
   }
 
   void _play() {
     if (widget.url.isNotEmpty) {
+      debugPrint('MEDIA_KIT_PLAYING: ${widget.url}');
       setState(() {
         _error = null;
         _buffering = true;
       });
-      _player.open(Media(widget.url)).catchError((e) {
-        setState(() {
-          _error = e.toString();
-          _buffering = false;
-        });
+      _player.open(Media(widget.url)).then((_) {
+        debugPrint('MEDIA_KIT_OPEN_SUCCESS');
+      }).catchError((e) {
+        debugPrint('MEDIA_KIT_OPEN_ERROR: $e');
+        if (mounted) {
+          setState(() {
+            _error = e.toString();
+            _buffering = false;
+          });
+        }
       });
     }
   }
