@@ -13,6 +13,7 @@ class VideoPlayerWidget extends StatefulWidget {
     super.key,
     required this.channel,
     required this.streamUrl,
+    required this.headers,
     required this.onPreviousChannel,
     required this.onNextChannel,
     required this.onShowChannelGuide,
@@ -20,6 +21,7 @@ class VideoPlayerWidget extends StatefulWidget {
 
   final Channel channel;
   final String streamUrl;
+  final Map<String, String> headers;
   final VoidCallback onPreviousChannel;
   final VoidCallback onNextChannel;
   final VoidCallback onShowChannelGuide;
@@ -50,7 +52,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   void didUpdateWidget(VideoPlayerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.channel.url != widget.channel.url ||
-        oldWidget.streamUrl != widget.streamUrl) {
+        oldWidget.streamUrl != widget.streamUrl ||
+        oldWidget.headers.toString() != widget.headers.toString()) {
       _initializePlayer();
     }
   }
@@ -83,6 +86,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       if (kIsWeb) {
         final controller = vp.VideoPlayerController.networkUrl(
           Uri.parse(widget.streamUrl),
+          httpHeaders: widget.headers,
         );
         _vpController = controller;
         controller.addListener(_handleWebControllerUpdate);
@@ -142,7 +146,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           });
         });
 
-        await player.open(mk.Media(widget.streamUrl));
+        await player.open(
+          mk.Media(widget.streamUrl, httpHeaders: widget.headers),
+        );
 
         if (!mounted) {
           return;
@@ -161,7 +167,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         return;
       }
       setState(() {
-        _error = error.toString();
+        _error = _formatPlaybackError(error.toString());
         _isLoading = false;
         _showControls = true;
       });
@@ -193,10 +199,22 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       _isPlaying = value.isPlaying;
       _isMuted = value.volume == 0;
       if (value.hasError) {
-        _error = value.errorDescription ?? 'Unknown web playback error';
+        _error = _formatPlaybackError(
+          value.errorDescription ?? 'Unknown web playback error',
+        );
         _showControls = true;
       }
     });
+  }
+
+  String _formatPlaybackError(String message) {
+    final normalized = message.toLowerCase();
+    if (normalized.contains('demuxer') && normalized.contains('parse')) {
+      return 'The stream responded, but this player could not parse the HLS '
+          'playlist. This source likely needs different headers or uses a '
+          'playlist variant that VLC accepts more easily than the app player.';
+    }
+    return message;
   }
 
   Future<void> _togglePlayback() async {

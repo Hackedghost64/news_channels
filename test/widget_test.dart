@@ -46,6 +46,7 @@ void main() {
                   context,
                   channel,
                   streamUrl,
+                  headers,
                   onPreviousChannel,
                   onNextChannel,
                   onShowChannelGuide,

@@ -14,6 +14,7 @@ typedef HomePlayerBuilder =
       BuildContext context,
       Channel channel,
       String streamUrl,
+      Map<String, String> headers,
       VoidCallback onPreviousChannel,
       VoidCallback onNextChannel,
       VoidCallback onShowChannelGuide,
@@ -302,6 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           channel,
           provider.resolveStreamUrl(channel),
+          provider.resolveHeaders(channel),
           provider.selectPreviousChannel,
           provider.selectNextChannel,
           () => _showGuide(provider),
@@ -309,6 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
         VideoPlayerWidget(
           channel: channel,
           streamUrl: provider.resolveStreamUrl(channel),
+          headers: provider.resolveHeaders(channel),
           onPreviousChannel: provider.selectPreviousChannel,
           onNextChannel: provider.selectNextChannel,
           onShowChannelGuide: () => _showGuide(provider),
@@ -777,6 +780,15 @@ class _DebugPanel extends StatelessWidget {
                   ? '-'
                   : provider.resolveStreamUrl(provider.selectedChannel!),
             ),
+            if (provider.selectedChannel != null)
+              _DebugRow(
+                label: 'Playback headers',
+                value: provider
+                    .resolveHeaders(provider.selectedChannel!)
+                    .entries
+                    .map((entry) => '${entry.key}: ${entry.value}')
+                    .join('\n'),
+              ),
             if (kIsWeb)
               SwitchListTile.adaptive(
                 dense: true,

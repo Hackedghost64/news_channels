@@ -46,6 +46,33 @@ class ChannelProvider with ChangeNotifier {
     return '$_webProxyPrefix${Uri.encodeComponent(channel.url)}';
   }
 
+  Map<String, String> resolveHeaders(Channel channel) {
+    final headers = <String, String>{
+      'Accept': '*/*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+
+    final uri = Uri.tryParse(channel.url);
+    final isHttp =
+        uri != null && (uri.scheme.eq('http') || uri.scheme.eq('https'));
+
+    if (uri != null && isHttp && !_useWebProxy) {
+      headers['Origin'] = uri.origin;
+      headers['Referer'] = '${uri.origin}/';
+    }
+
+    if (!kIsWeb) {
+      headers['User-Agent'] =
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+          '(KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36';
+    }
+
+    headers.addAll(channel.headers);
+    return headers;
+  }
+
   Future<void> loadChannels() async {
     if (_isLoading) {
       return;
@@ -120,4 +147,8 @@ class ChannelProvider with ChangeNotifier {
     _useWebProxy = value;
     notifyListeners();
   }
+}
+
+extension on String {
+  bool eq(String other) => toLowerCase() == other.toLowerCase();
 }
