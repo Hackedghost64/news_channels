@@ -29,10 +29,10 @@ class VideoPlayerWidget extends StatefulWidget {
   final ValueChanged<String>? onPlaybackUnavailable;
 
   @override
-  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+  State<VideoPlayerWidget> createState() => VideoPlayerWidgetState();
 }
 
-class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
+class VideoPlayerWidgetState extends State<VideoPlayerWidget> with WidgetsBindingObserver {
   mk.Player? _mkPlayer;
   mkv.VideoController? _mkController;
   vp.VideoPlayerController? _vpController;
@@ -48,7 +48,29 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializePlayer();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive) {
+      _pausePlayback();
+    }
+  }
+
+  Future<void> _pausePlayback() async {
+    try {
+      if (kIsWeb) {
+        await _vpController?.pause();
+      } else {
+        await _mkPlayer?.pause();
+      }
+    } catch (e) {
+      debugPrint('Error pausing on lifecycle change: $e');
+    }
   }
 
   @override
@@ -233,7 +255,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     return message;
   }
 
-  Future<void> _togglePlayback() async {
+  Future<void> togglePlayback() async {
     try {
       if (kIsWeb) {
         final controller = _vpController;
@@ -259,7 +281,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         }
       }
 
-      _showControlsTemporarily();
+      showControlsTemporarily();
     } catch (error, stackTrace) {
       debugPrint('PLAYER_TOGGLE_ERROR: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -287,7 +309,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         await player.setVolume(_isMuted ? 100 : 0);
       }
 
-      _showControlsTemporarily();
+      showControlsTemporarily();
     } catch (error, stackTrace) {
       debugPrint('PLAYER_VOLUME_ERROR: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -320,7 +342,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
   }
 
-  void _showControlsTemporarily() {
+  void showControlsTemporarily() {
     if (!mounted) {
       return;
     }
@@ -331,6 +353,18 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     _scheduleControlsHide();
   }
 
+  void hideControls() {
+    if (!mounted) {
+      return;
+    }
+    _cancelControlsTimer();
+    setState(() {
+      _showControls = false;
+    });
+  }
+
+  bool get areControlsVisible => _showControls;
+
   void _handleDoubleTap(TapDownDetails details, BoxConstraints constraints) {
     final midpoint = constraints.maxWidth / 2;
     if (details.localPosition.dx < midpoint) {
@@ -338,11 +372,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     } else {
       widget.onNextChannel();
     }
-    _showControlsTemporarily();
+    showControlsTemporarily();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cancelControlsTimer();
     _disposePlayers();
     super.dispose();
@@ -354,7 +389,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       builder: (context, constraints) {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: _showControlsTemporarily,
+          onTap: showControlsTemporarily,
           onDoubleTapDown: (details) => _handleDoubleTap(details, constraints),
           onHorizontalDragEnd: (details) {
             final velocity = details.primaryVelocity ?? 0;
@@ -366,7 +401,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             } else {
               widget.onPreviousChannel();
             }
-            _showControlsTemporarily();
+            showControlsTemporarily();
           },
           child: Stack(
             fit: StackFit.expand,
@@ -381,7 +416,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                   error: _error,
                   onPreviousChannel: widget.onPreviousChannel,
                   onNextChannel: widget.onNextChannel,
-                  onTogglePlayback: _togglePlayback,
+                  onTogglePlayback: togglePlayback,
                   onToggleMute: _toggleMute,
                   onRetry: _initializePlayer,
                   onShowChannelGuide: widget.onShowChannelGuide,

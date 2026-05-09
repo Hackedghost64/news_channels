@@ -33,6 +33,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const double _channelCardWidth = 188;
 
+  final GlobalKey<VideoPlayerWidgetState> _playerKey = GlobalKey<VideoPlayerWidgetState>();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _keyboardFocusNode = FocusNode(debugLabel: 'home_keyboard');
   final List<FocusNode> _channelFocusNodes = <FocusNode>[];
@@ -41,6 +42,32 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _channelNotice;
   bool _showChannelGuide = true;
   int _focusedIndex = 0;
+
+  Future<bool> _showExitConfirmation() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            title: const Text('Exit App', style: TextStyle(color: Colors.white)),
+            content: const Text(
+              'Do you want to exit the application?',
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Exit'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
 
   @override
   void initState() {
@@ -228,11 +255,33 @@ class _HomeScreenState extends State<HomeScreen> {
         provider.selectNextChannel();
         return KeyEventResult.handled;
       }
+
+      if (key == LogicalKeyboardKey.enter ||
+          key == LogicalKeyboardKey.select ||
+          key == LogicalKeyboardKey.space) {
+        _playerKey.currentState?.togglePlayback();
+        return KeyEventResult.handled;
+      }
     }
 
     if (key == LogicalKeyboardKey.escape ||
         key == LogicalKeyboardKey.backspace) {
-      _showGuide(provider, requestFocus: false);
+      if (_showChannelGuide) {
+        _hideGuide();
+        return KeyEventResult.handled;
+      }
+
+      final player = _playerKey.currentState;
+      if (player != null && player.areControlsVisible) {
+        player.hideControls();
+        return KeyEventResult.handled;
+      }
+
+      _showExitConfirmation().then((exit) {
+        if (exit) {
+          SystemNavigator.pop();
+        }
+      });
       return KeyEventResult.handled;
     }
 
@@ -250,63 +299,87 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, provider, child) {
         _syncFocusNodes(provider.channels.length);
 
-        return Scaffold(
-          body: KeyboardListener(
-            focusNode: _keyboardFocusNode,
-            autofocus: true,
-            onKeyEvent: (event) => _handleKeyEvent(event, provider),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _keyboardFocusNode.requestFocus,
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFF171717), Color(0xFF050505)],
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) {
+              return;
+            }
+
+            if (_showChannelGuide) {
+              _hideGuide();
+              return;
+            }
+
+            final player = _playerKey.currentState;
+            if (player != null && player.areControlsVisible) {
+              player.hideControls();
+              return;
+            }
+
+            final shouldExit = await _showExitConfirmation();
+            if (shouldExit) {
+              SystemNavigator.pop();
+            }
+          },
+          child: Scaffold(
+            body: KeyboardListener(
+              focusNode: _keyboardFocusNode,
+              autofocus: true,
+              onKeyEvent: (event) => _handleKeyEvent(event, provider),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _keyboardFocusNode.requestFocus,
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFF171717), Color(0xFF050505)],
+                    ),
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: _buildBody(provider)),
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: _TopBar(
-                        provider: provider,
-                        onReload: provider.loadChannels,
-                        onShowGuide: () => _showGuide(provider),
-                      ),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: _ChannelGuide(
-                        visible:
-                            _showChannelGuide && provider.channels.isNotEmpty,
-                        channelCount: provider.channels.length,
-                        selectedChannel: provider.selectedChannel,
-                        selectedIndex: provider.selectedIndex,
-                        scrollController: _scrollController,
-                        channels: provider.channels,
-                        focusNodes: _channelFocusNodes,
-                        onChannelFocused: _focusChannel,
-                        onChannelSelected: (index) {
-                          _focusedIndex = index;
-                          provider.selectChannelAt(index);
-                          _hideGuide();
-                        },
-                      ),
-                    ),
-                    if (kDebugMode)
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _buildBody(provider)),
                       Positioned(
-                        top: 88,
-                        right: 16,
-                        child: _DebugPanel(provider: provider),
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: _TopBar(
+                          provider: provider,
+                          onReload: provider.loadChannels,
+                          onShowGuide: () => _showGuide(provider),
+                        ),
                       ),
-                  ],
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: _ChannelGuide(
+                          visible:
+                              _showChannelGuide && provider.channels.isNotEmpty,
+                          channelCount: provider.channels.length,
+                          selectedChannel: provider.selectedChannel,
+                          selectedIndex: provider.selectedIndex,
+                          scrollController: _scrollController,
+                          channels: provider.channels,
+                          focusNodes: _channelFocusNodes,
+                          onChannelFocused: _focusChannel,
+                          onChannelSelected: (index) {
+                            _focusedIndex = index;
+                            provider.selectChannelAt(index);
+                            _hideGuide();
+                          },
+                        ),
+                      ),
+                      if (kDebugMode)
+                        Positioned(
+                          top: 88,
+                          right: 16,
+                          child: _DebugPanel(provider: provider),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -356,6 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
           () => _showGuide(provider),
         ) ??
         VideoPlayerWidget(
+          key: _playerKey,
           channel: channel,
           streamUrl: provider.resolveStreamUrl(channel),
           headers: provider.resolveHeaders(channel),
