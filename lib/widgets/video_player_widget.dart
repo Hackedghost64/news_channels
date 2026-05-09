@@ -64,8 +64,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       }
     });
     
-    _player.stream.status.listen((status) {
-      debugPrint('MEDIA_KIT_STATUS: $status');
+    _player.stream.playing.listen((playing) {
+      debugPrint('MEDIA_KIT_PLAYING_STATE: $playing');
     });
   }
 
