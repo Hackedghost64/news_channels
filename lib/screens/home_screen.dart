@@ -15,6 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showOverlay = true;
   bool _hasStarted = false;
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _startFocusNode = FocusNode();
   int _focusedIndex = 0;
 
   @override
@@ -23,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<ChannelProvider>().loadChannels();
+        _startFocusNode.requestFocus();
       }
     });
   }
@@ -42,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _startFocusNode.dispose();
     super.dispose();
   }
 
@@ -78,144 +81,142 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (!_hasStarted) {
             return Center(
-              child: Focus(
-                autofocus: true,
-                onKeyEvent: (node, event) {
-                  if (event is KeyDownEvent && 
-                      (event.logicalKey == LogicalKeyboardKey.select || 
-                       event.logicalKey == LogicalKeyboardKey.enter)) {
-                    _startApp();
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: Builder(builder: (context) {
-                  final focused = Focus.of(context).hasFocus;
-                  return ElevatedButton(
-                    onPressed: _startApp,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: focused ? Colors.red : Colors.grey[900],
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                    ),
-                    child: const Text('Start Viewing', style: TextStyle(fontSize: 24)),
-                  );
-                }),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.tv, color: Colors.white, size: 100),
+                  const SizedBox(height: 30),
+                  const Text('News TV', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 50),
+                  Focus(
+                    focusNode: _startFocusNode,
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent) {
+                        if (event.logicalKey == LogicalKeyboardKey.select || 
+                            event.logicalKey == LogicalKeyboardKey.enter ||
+                            event.logicalKey == LogicalKeyboardKey.space) {
+                          _startApp();
+                          return KeyEventResult.handled;
+                        }
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(builder: (context) {
+                      final focused = Focus.of(context).hasFocus;
+                      return ElevatedButton(
+                        onPressed: _startApp,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: focused ? Colors.red : Colors.grey[900],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 25),
+                          side: BorderSide(color: focused ? Colors.white : Colors.transparent, width: 2),
+                        ),
+                        child: const Text('WATCH LIVE', style: TextStyle(fontSize: 24)),
+                      );
+                    }),
+                  ),
+                ],
               ),
             );
           }
 
-          return Shortcuts(
-            shortcuts: <LogicalKeySet, Intent>{
-              LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
-              LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
-              LogicalKeySet(LogicalKeyboardKey.arrowUp): const DirectionalFocusIntent(TraversalDirection.up),
-              LogicalKeySet(LogicalKeyboardKey.arrowDown): const DirectionalFocusIntent(TraversalDirection.down),
-              LogicalKeySet(LogicalKeyboardKey.arrowLeft): const DirectionalFocusIntent(TraversalDirection.left),
-              LogicalKeySet(LogicalKeyboardKey.arrowRight): const DirectionalFocusIntent(TraversalDirection.right),
+          return KeyboardListener(
+            focusNode: FocusNode(),
+            autofocus: true,
+            onKeyEvent: (event) {
+              if (event is KeyDownEvent) {
+                if (event.logicalKey == LogicalKeyboardKey.arrowUp && !_showOverlay) {
+                  _toggleOverlay();
+                } else if (event.logicalKey == LogicalKeyboardKey.escape || 
+                           event.logicalKey == LogicalKeyboardKey.backspace) {
+                  if (_showOverlay) {
+                    _toggleOverlay();
+                  }
+                }
+              }
             },
-            child: Actions(
-              actions: <Type, Action<Intent>>{
-                ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (intent) {
-                  if (!_showOverlay) _toggleOverlay();
-                  return null;
-                }),
-              },
-              child: Stack(
-                children: [
-                  // Video Player Background
-                  if (provider.selectedChannel != null)
-                    Positioned.fill(
-                      child: GestureDetector(
-                        onTap: _toggleOverlay,
-                        child: VideoPlayerWidget(
-                          url: provider.selectedChannel!.url,
-                          channelName: provider.selectedChannel!.name,
-                        ),
+            child: Stack(
+              children: [
+                // Video Player Background
+                if (provider.selectedChannel != null)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      onTap: _toggleOverlay,
+                      child: VideoPlayerWidget(
+                        url: provider.selectedChannel!.url,
+                        channelName: provider.selectedChannel!.name,
                       ),
                     ),
+                  ),
 
-                  // Channel Overlay
-                  if (_showOverlay)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: 250,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [
-                              Colors.black.withOpacity(0.9),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              child: Text(
-                                provider.selectedChannel?.name ?? 'Select a Channel',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  shadows: [Shadow(blurRadius: 10, color: Colors.black)],
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                scrollDirection: Axis.horizontal,
-                                itemCount: provider.channels.length,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                itemBuilder: (context, index) {
-                                  final channel = provider.channels[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: _ChannelCard(
-                                      channel: channel,
-                                      isSelected: provider.selectedChannel == channel,
-                                      autofocus: index == 0,
-                                      onFocusChange: (focused) {
-                                        if (focused) {
-                                          _scrollToIndex(index);
-                                          setState(() => _focusedIndex = index);
-                                        }
-                                      },
-                                      onTap: () {
-                                        provider.selectChannel(channel);
-                                        _toggleOverlay();
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                // Channel Overlay
+                if (_showOverlay)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 280,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.95),
+                            Colors.black.withOpacity(0.5),
+                            Colors.transparent,
                           ],
                         ),
                       ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(25, 10, 25, 10),
+                            child: Text(
+                              provider.selectedChannel?.name ?? 'Select a Channel',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                shadows: [Shadow(blurRadius: 15, color: Colors.black)],
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              scrollDirection: Axis.horizontal,
+                              itemCount: provider.channels.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 15),
+                              itemBuilder: (context, index) {
+                                final channel = provider.channels[index];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 15),
+                                  child: _ChannelCard(
+                                    channel: channel,
+                                    isSelected: provider.selectedChannel == channel,
+                                    autofocus: index == _focusedIndex,
+                                    onFocusChange: (focused) {
+                                      if (focused) {
+                                        _scrollToIndex(index);
+                                        _focusedIndex = index;
+                                      }
+                                    },
+                                    onTap: () {
+                                      provider.selectChannel(channel);
+                                      _toggleOverlay();
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  
-                  // Hidden trigger to show overlay on Arrow Up
-                  if (!_showOverlay)
-                    Focus(
-                      autofocus: true,
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                          _toggleOverlay();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: const SizedBox.shrink(),
-                    ),
-                ],
-              ),
+                  ),
+              ],
             ),
           );
         },
