@@ -13,6 +13,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _showOverlay = true;
+  final FocusScopeNode _overlayFocusScope = FocusScopeNode();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -27,16 +29,45 @@ class _HomeScreenState extends State<HomeScreen> {
   void _toggleOverlay() {
     setState(() {
       _showOverlay = !_showOverlay;
+      if (_showOverlay) {
+        _overlayFocusScope.requestFocus();
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _overlayFocusScope.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToIndex(int index) {
+    if (!_scrollController.hasClients) return;
+    const itemWidth = 196.0; // card width (180) + padding (16)
+    final target = index * itemWidth;
+    _scrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Shortcuts(
-        shortcuts: <LogicalKeySet, Intent>{
-          LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
+      body: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): () {
+            if (_showOverlay) _toggleOverlay();
+          },
+          const SingleActivator(LogicalKeyboardKey.backspace): () {
+            if (_showOverlay) _toggleOverlay();
+          },
+          const SingleActivator(LogicalKeyboardKey.arrowUp): () {
+            if (!_showOverlay) _toggleOverlay();
+          },
         },
         child: Consumer<ChannelProvider>(
           builder: (context, provider, child) {
@@ -59,9 +90,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Video Player Background
                 if (provider.selectedChannel != null)
                   Positioned.fill(
-                    child: VideoPlayerWidget(
-                      url: provider.selectedChannel!.url,
-                      channelName: provider.selectedChannel!.name,
+                    child: GestureDetector(
+                      onTap: _toggleOverlay,
+                      child: VideoPlayerWidget(
+                        url: provider.selectedChannel!.url,
+                        channelName: provider.selectedChannel!.name,
+                      ),
                     ),
                   ),
 
@@ -71,63 +105,66 @@ class _HomeScreenState extends State<HomeScreen> {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    child: Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.9),
-                            Colors.transparent,
+                    child: FocusScope(
+                      node: _overlayFocusScope,
+                      child: Container(
+                        height: 250,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.9),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              child: Text(
+                                provider.selectedChannel?.name ?? 'Select a Channel',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                scrollDirection: Axis.horizontal,
+                                itemCount: provider.channels.length,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                itemBuilder: (context, index) {
+                                  final channel = provider.channels[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _ChannelCard(
+                                      channel: channel,
+                                      isSelected: provider.selectedChannel == channel,
+                                      autofocus: index == 0,
+                                      onFocusChange: (focused) {
+                                        if (focused) _scrollToIndex(index);
+                                      },
+                                      onTap: () {
+                                        provider.selectChannel(channel);
+                                        _toggleOverlay();
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            child: Text(
-                              provider.selectedChannel?.name ?? 'Select a Channel',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: provider.channels.length,
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              itemBuilder: (context, index) {
-                                final channel = provider.channels[index];
-                                return Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: _ChannelCard(
-                                    channel: channel,
-                                    isSelected: provider.selectedChannel == channel,
-                                    onTap: () {
-                                      provider.selectChannel(channel);
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
-                
-                // Interaction Layer to show/hide overlay
-                GestureDetector(
-                  onTap: _toggleOverlay,
-                  behavior: HitTestBehavior.translucent,
-                  child: Container(),
-                ),
               ],
             );
           },
@@ -140,11 +177,15 @@ class _HomeScreenState extends State<HomeScreen> {
 class _ChannelCard extends StatefulWidget {
   final dynamic channel;
   final bool isSelected;
+  final bool autofocus;
+  final ValueChanged<bool> onFocusChange;
   final VoidCallback onTap;
 
   const _ChannelCard({
     required this.channel,
     required this.isSelected,
+    required this.autofocus,
+    required this.onFocusChange,
     required this.onTap,
   });
 
@@ -159,21 +200,26 @@ class _ChannelCardState extends State<_ChannelCard> {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: widget.onTap,
+      autofocus: widget.autofocus,
       onFocusChange: (focused) {
         setState(() {
           _isFocused = focused;
         });
+        widget.onFocusChange(focused);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 160,
+        width: 180,
         decoration: BoxDecoration(
           color: _isFocused ? Colors.white.withOpacity(0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _isFocused ? Colors.red : (widget.isSelected ? Colors.white : Colors.transparent),
-            width: 2,
+            width: 3,
           ),
+          boxShadow: _isFocused 
+            ? [BoxShadow(color: Colors.red.withOpacity(0.5), blurRadius: 15, spreadRadius: 2)]
+            : [],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
