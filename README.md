@@ -1,17 +1,35 @@
-# news_tv
+# News TV
 
-A new Flutter project.
+Flutter live news TV app with remote-friendly navigation, improved playback controls, and a safer web debugging flow.
 
-## Getting Started
+## What changed
 
-This project is a starting point for a Flutter application.
+- Better navigation for keyboard, TV remotes, and touch.
+- Player controls for play/pause, mute, retry, previous/next channel, and guide access.
+- Swipe and double-tap gestures to switch channels.
+- Remote channel loading with automatic fallback to bundled `channels.json`.
+- Debug panel in debug builds with raw URL, playback URL, source info, and a web proxy toggle for Chrome troubleshooting.
+- Testable provider/repository structure instead of hard-wiring live network calls into startup.
 
-A few resources to get you started if this is your first Flutter project:
+## Run
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+For Chrome debugging:
+
+```bash
+flutter run -d chrome
+```
+
+Open the in-app `Debug` panel in debug mode to inspect the active stream URL and switch the web CORS proxy on or off.
+
+## Verification
+
+```bash
+flutter analyze
+flutter test
+flutter build web
+```
