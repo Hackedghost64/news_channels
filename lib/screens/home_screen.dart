@@ -13,12 +13,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _showOverlay = true;
-  final FocusNode _listFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<ChannelProvider>().loadChannels());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ChannelProvider>().loadChannels();
+      }
+    });
   }
 
   void _toggleOverlay() {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/channel.dart';
 
@@ -17,7 +18,7 @@ class ChannelService {
       }
     } catch (e) {
       // In a real app, we might want to log this or return a cached version
-      print('Error fetching channels: $e');
+      debugPrint('Error fetching channels: $e');
       rethrow;
     }
   }

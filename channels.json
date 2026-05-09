@@ -1,47 +1,47 @@
 [
   {
-    "name": "NDTV India",
-    "url": "",
-    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/ndtv_india.png"
-  },
-  {
-    "name": "Aaj Tak",
-    "url": "",
+    "name": "Aaj Tak HD",
+    "url": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
     "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/aaj_tak.png"
   },
   {
+    "name": "NDTV 24x7",
+    "url": "https://ndtv24x7elemarchana.akamaized.net/hls/live/2003678/ndtv24x7/master.m3u8",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/ndtv_india.png"
+  },
+  {
     "name": "ABP News",
-    "url": "",
+    "url": "https://d2l4ar6y3mrs4k.cloudfront.net/live-streaming/abpnews-livetv/master.m3u8",
     "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/abp_news.png"
   },
   {
-    "name": "Republic Bharat",
-    "url": "",
-    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/republic_bharat.png"
-  },
-  {
     "name": "Zee News",
-    "url": "",
+    "url": "https://dknttpxmr0dwf.cloudfront.net/index_57.m3u8",
     "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/zee_news.png"
   },
   {
     "name": "India TV",
-    "url": "",
+    "url": "https://pl-indiatvnews.akamaized.net/out/v1/db79179b608641ceaa5a4d0dd0dca8da/index.m3u8",
     "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/india_tv.png"
   },
   {
+    "name": "Republic TV",
+    "url": "https://samsung-republictv.amagi.tv/ts-ap-s1-n1/playlist/samsungin-republictv-samsungindia/playlist.m3u8",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/republic_bharat.png"
+  },
+  {
     "name": "News18 India",
-    "url": "",
+    "url": "https://n18syndication.akamaized.net/bpk-tv/News18_India_NW18_MOB/output01/master.m3u8",
     "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/news18_india.png"
   },
   {
-    "name": "WION",
-    "url": "",
-    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/wion.png"
+    "name": "News 24",
+    "url": "https://vidcdn.vidgyor.com/news24-origin/liveabr/playlist.m3u8",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/news24.png"
   },
   {
-    "name": "DD News",
-    "url": "",
-    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/dd_news.png"
+    "name": "TV9 Bharatvarsh",
+    "url": "https://dyjmyiv3bp2ez.cloudfront.net/pub-iotv9hinjzgtpe/liveabr/playlist.m3u8",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/tv9_bharatvarsh.png"
   }
 ]
