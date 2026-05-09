@@ -1,0 +1,47 @@
+[
+  {
+    "name": "NDTV India",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/ndtv_india.png"
+  },
+  {
+    "name": "Aaj Tak",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/aaj_tak.png"
+  },
+  {
+    "name": "ABP News",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/abp_news.png"
+  },
+  {
+    "name": "Republic Bharat",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/republic_bharat.png"
+  },
+  {
+    "name": "Zee News",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/zee_news.png"
+  },
+  {
+    "name": "India TV",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/india_tv.png"
+  },
+  {
+    "name": "News18 India",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/news18_india.png"
+  },
+  {
+    "name": "WION",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/wion.png"
+  },
+  {
+    "name": "DD News",
+    "url": "",
+    "logo": "https://raw.githubusercontent.com/Hackedghost64/news_channels/main/logos/dd_news.png"
+  }
+]
