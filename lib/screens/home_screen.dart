@@ -13,8 +13,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _showOverlay = true;
-  final FocusScopeNode _overlayFocusScope = FocusScopeNode();
+  bool _hasStarted = false;
   final ScrollController _scrollController = ScrollController();
+  int _focusedIndex = 0;
 
   @override
   void initState() {
@@ -29,22 +30,24 @@ class _HomeScreenState extends State<HomeScreen> {
   void _toggleOverlay() {
     setState(() {
       _showOverlay = !_showOverlay;
-      if (_showOverlay) {
-        _overlayFocusScope.requestFocus();
-      }
+    });
+  }
+
+  void _startApp() {
+    setState(() {
+      _hasStarted = true;
     });
   }
 
   @override
   void dispose() {
-    _overlayFocusScope.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _scrollToIndex(int index) {
     if (!_scrollController.hasClients) return;
-    const itemWidth = 196.0; // card width (180) + padding (16)
+    const itemWidth = 196.0;
     final target = index * itemWidth;
     _scrollController.animateTo(
       target,
@@ -57,56 +60,86 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () {
-            if (_showOverlay) _toggleOverlay();
-          },
-          const SingleActivator(LogicalKeyboardKey.backspace): () {
-            if (_showOverlay) _toggleOverlay();
-          },
-          const SingleActivator(LogicalKeyboardKey.arrowUp): () {
-            if (!_showOverlay) _toggleOverlay();
-          },
-        },
-        child: Consumer<ChannelProvider>(
-          builder: (context, provider, child) {
-            if (provider.isLoading && provider.channels.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      body: Consumer<ChannelProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading && provider.channels.isEmpty) {
+            return const Center(child: CircularProgressIndicator(color: Colors.red));
+          }
 
-            if (provider.error != null && provider.channels.isEmpty) {
-              return Center(
-                child: Text(
-                  'call divyam the error is : [${provider.error}]',
-                  style: const TextStyle(color: Colors.red, fontSize: 20),
-                  textAlign: TextAlign.center,
-                ),
-              );
-            }
+          if (provider.error != null && provider.channels.isEmpty) {
+            return Center(
+              child: Text(
+                'call divyam the error is : [${provider.error}]',
+                style: const TextStyle(color: Colors.red, fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+            );
+          }
 
-            return Stack(
-              children: [
-                // Video Player Background
-                if (provider.selectedChannel != null)
-                  Positioned.fill(
-                    child: GestureDetector(
-                      onTap: _toggleOverlay,
-                      child: VideoPlayerWidget(
-                        url: provider.selectedChannel!.url,
-                        channelName: provider.selectedChannel!.name,
+          if (!_hasStarted) {
+            return Center(
+              child: Focus(
+                autofocus: true,
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent && 
+                      (event.logicalKey == LogicalKeyboardKey.select || 
+                       event.logicalKey == LogicalKeyboardKey.enter)) {
+                    _startApp();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Builder(builder: (context) {
+                  final focused = Focus.of(context).hasFocus;
+                  return ElevatedButton(
+                    onPressed: _startApp,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: focused ? Colors.red : Colors.grey[900],
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                    ),
+                    child: const Text('Start Viewing', style: TextStyle(fontSize: 24)),
+                  );
+                }),
+              ),
+            );
+          }
+
+          return Shortcuts(
+            shortcuts: <LogicalKeySet, Intent>{
+              LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
+              LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+              LogicalKeySet(LogicalKeyboardKey.arrowUp): const DirectionalFocusIntent(TraversalDirection.up),
+              LogicalKeySet(LogicalKeyboardKey.arrowDown): const DirectionalFocusIntent(TraversalDirection.down),
+              LogicalKeySet(LogicalKeyboardKey.arrowLeft): const DirectionalFocusIntent(TraversalDirection.left),
+              LogicalKeySet(LogicalKeyboardKey.arrowRight): const DirectionalFocusIntent(TraversalDirection.right),
+            },
+            child: Actions(
+              actions: <Type, Action<Intent>>{
+                ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (intent) {
+                  if (!_showOverlay) _toggleOverlay();
+                  return null;
+                }),
+              },
+              child: Stack(
+                children: [
+                  // Video Player Background
+                  if (provider.selectedChannel != null)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        onTap: _toggleOverlay,
+                        child: VideoPlayerWidget(
+                          url: provider.selectedChannel!.url,
+                          channelName: provider.selectedChannel!.name,
+                        ),
                       ),
                     ),
-                  ),
 
-                // Channel Overlay
-                if (_showOverlay)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: FocusScope(
-                      node: _overlayFocusScope,
+                  // Channel Overlay
+                  if (_showOverlay)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
                       child: Container(
                         height: 250,
                         decoration: BoxDecoration(
@@ -149,7 +182,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                       isSelected: provider.selectedChannel == channel,
                                       autofocus: index == 0,
                                       onFocusChange: (focused) {
-                                        if (focused) _scrollToIndex(index);
+                                        if (focused) {
+                                          _scrollToIndex(index);
+                                          setState(() => _focusedIndex = index);
+                                        }
                                       },
                                       onTap: () {
                                         provider.selectChannel(channel);
@@ -164,11 +200,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                  ),
-              ],
-            );
-          },
-        ),
+                  
+                  // Hidden trigger to show overlay on Arrow Up
+                  if (!_showOverlay)
+                    Focus(
+                      autofocus: true,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                          _toggleOverlay();
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: const SizedBox.shrink(),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
