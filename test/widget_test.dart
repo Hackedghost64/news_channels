@@ -50,6 +50,7 @@ void main() {
                   onPreviousChannel,
                   onNextChannel,
                   onShowChannelGuide,
+                  onInteraction,
                 ) {
                   return ColoredBox(
                     color: Colors.black,

@@ -19,6 +19,7 @@ typedef HomePlayerBuilder =
       VoidCallback onPreviousChannel,
       VoidCallback onNextChannel,
       VoidCallback onShowChannelGuide,
+      VoidCallback onInteraction,
     );
 
 class HomeScreen extends StatefulWidget {
@@ -39,11 +40,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<FocusNode> _channelFocusNodes = <FocusNode>[];
 
   Timer? _channelNoticeTimer;
+  Timer? _uiHideTimer;
   String? _channelNotice;
   bool _showChannelGuide = true;
+  bool _uiVisible = true;
   int _focusedIndex = 0;
 
   Future<bool> _showExitConfirmation() async {
+    _resetUiTimer();
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -75,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _keyboardFocusNode.requestFocus();
+        _resetUiTimer();
       }
     });
   }
@@ -82,12 +87,30 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _channelNoticeTimer?.cancel();
+    _uiHideTimer?.cancel();
     for (final node in _channelFocusNodes) {
       node.dispose();
     }
     _scrollController.dispose();
     _keyboardFocusNode.dispose();
     super.dispose();
+  }
+
+  void _resetUiTimer() {
+    _uiHideTimer?.cancel();
+    if (!_uiVisible) {
+      setState(() {
+        _uiVisible = true;
+      });
+    }
+    _uiHideTimer = Timer(const Duration(seconds: 7), () {
+      if (mounted) {
+        setState(() {
+          _uiVisible = false;
+        });
+        _playerKey.currentState?.hideControls();
+      }
+    });
   }
 
   void _syncFocusNodes(int count) {
@@ -110,6 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showGuide(ChannelProvider provider, {bool requestFocus = true}) {
+    _resetUiTimer();
     if (!_showChannelGuide) {
       setState(() {
         _showChannelGuide = true;
@@ -132,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _hideGuide() {
+    _resetUiTimer();
     if (!_showChannelGuide) {
       return;
     }
@@ -143,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _focusChannel(int index) {
+    _resetUiTimer();
     if (index < 0 || index >= _channelFocusNodes.length) {
       return;
     }
@@ -166,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showChannelNotice(String message) {
+    _resetUiTimer();
     _channelNoticeTimer?.cancel();
     setState(() {
       _channelNotice = message;
@@ -181,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handlePlaybackUnavailable(ChannelProvider provider, Channel channel) {
+    _resetUiTimer();
     final normalizedName = channel.name.toLowerCase();
     if (!normalizedName.contains('aaj tak')) {
       return;
@@ -214,6 +242,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final key = event.logicalKey;
+    final wasUiHidden = !_uiVisible;
+    _resetUiTimer();
+
+    if (wasUiHidden) {
+      // If UI was hidden, the first key press just wakes it up
+      // and shows the controls in the player as well.
+      _playerKey.currentState?.showControlsTemporarily();
+      return KeyEventResult.handled;
+    }
 
     if (key == LogicalKeyboardKey.arrowUp) {
       _showGuide(provider);
@@ -248,11 +285,13 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       if (key == LogicalKeyboardKey.arrowLeft) {
         provider.selectPreviousChannel();
+        _playerKey.currentState?.showControlsTemporarily();
         return KeyEventResult.handled;
       }
 
       if (key == LogicalKeyboardKey.arrowRight) {
         provider.selectNextChannel();
+        _playerKey.currentState?.showControlsTemporarily();
         return KeyEventResult.handled;
       }
 
@@ -329,7 +368,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onKeyEvent: (event) => _handleKeyEvent(event, provider),
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: _keyboardFocusNode.requestFocus,
+                onTap: () {
+                  _keyboardFocusNode.requestFocus();
+                  _resetUiTimer();
+                },
                 child: DecoratedBox(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
@@ -345,38 +387,69 @@ class _HomeScreenState extends State<HomeScreen> {
                         top: 0,
                         left: 0,
                         right: 0,
-                        child: _TopBar(
-                          provider: provider,
-                          onReload: provider.loadChannels,
-                          onShowGuide: () => _showGuide(provider),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 300),
+                          opacity: _uiVisible ? 1.0 : 0.0,
+                          child: IgnorePointer(
+                            ignoring: !_uiVisible,
+                            child: ExcludeFocus(
+                              excluding: !_uiVisible,
+                              child: _TopBar(
+                                provider: provider,
+                                onReload: provider.loadChannels,
+                                onShowGuide: () => _showGuide(provider),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       Positioned(
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        child: _ChannelGuide(
-                          visible:
-                              _showChannelGuide && provider.channels.isNotEmpty,
-                          channelCount: provider.channels.length,
-                          selectedChannel: provider.selectedChannel,
-                          selectedIndex: provider.selectedIndex,
-                          scrollController: _scrollController,
-                          channels: provider.channels,
-                          focusNodes: _channelFocusNodes,
-                          onChannelFocused: _focusChannel,
-                          onChannelSelected: (index) {
-                            _focusedIndex = index;
-                            provider.selectChannelAt(index);
-                            _hideGuide();
-                          },
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 300),
+                          opacity: _uiVisible ? 1.0 : 0.0,
+                          child: IgnorePointer(
+                            ignoring: !_uiVisible,
+                            child: ExcludeFocus(
+                              excluding: !_uiVisible,
+                              child: _ChannelGuide(
+                                visible:
+                                    _showChannelGuide &&
+                                    provider.channels.isNotEmpty,
+                                channelCount: provider.channels.length,
+                                selectedChannel: provider.selectedChannel,
+                                selectedIndex: provider.selectedIndex,
+                                scrollController: _scrollController,
+                                channels: provider.channels,
+                                focusNodes: _channelFocusNodes,
+                                onChannelFocused: _focusChannel,
+                                onChannelSelected: (index) {
+                                  _focusedIndex = index;
+                                  provider.selectChannelAt(index);
+                                  _hideGuide();
+                                },
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       if (kDebugMode)
                         Positioned(
                           top: 88,
                           right: 16,
-                          child: _DebugPanel(provider: provider),
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 300),
+                            opacity: _uiVisible ? 1.0 : 0.0,
+                            child: IgnorePointer(
+                              ignoring: !_uiVisible,
+                              child: ExcludeFocus(
+                                excluding: !_uiVisible,
+                                child: _DebugPanel(provider: provider),
+                              ),
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -427,6 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
           provider.selectPreviousChannel,
           provider.selectNextChannel,
           () => _showGuide(provider),
+          _resetUiTimer,
         ) ??
         VideoPlayerWidget(
           key: _playerKey,
@@ -438,6 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onShowChannelGuide: () => _showGuide(provider),
           onPlaybackUnavailable: (_) =>
               _handlePlaybackUnavailable(provider, channel),
+          onInteraction: _resetUiTimer,
         );
 
     return Stack(
@@ -449,27 +524,34 @@ class _HomeScreenState extends State<HomeScreen> {
             top: 96,
             left: 20,
             right: 20,
-            child: Center(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.76),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.14),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  child: Text(
-                    _channelNotice!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: _uiVisible ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !_uiVisible,
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.76),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.14),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                      child: Text(
+                        _channelNotice!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -479,17 +561,28 @@ class _HomeScreenState extends State<HomeScreen> {
         Positioned(
           left: 20,
           bottom: 20,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.58),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-            ),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Text(
-                'Swipe or double tap to switch channels. Press Up for the guide.',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 300),
+            opacity: _uiVisible ? 1.0 : 0.0,
+            child: IgnorePointer(
+              ignoring: !_uiVisible,
+              child: ExcludeFocus(
+                excluding: !_uiVisible,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.58),
+                    borderRadius: BorderRadius.circular(999),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Text(
+                      'Swipe or double tap to switch channels. Press Up for the guide.',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -538,15 +631,22 @@ class _TopBar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'News TV',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                        Image.asset(
+                          'assets/in-samsung-news-548832250.avif',
+                          height: 40,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Text(
+                              'News TV',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
                           provider.selectedChannel?.name ??
                               'Awaiting channel list',

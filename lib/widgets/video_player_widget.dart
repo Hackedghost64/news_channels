@@ -18,6 +18,7 @@ class VideoPlayerWidget extends StatefulWidget {
     required this.onNextChannel,
     required this.onShowChannelGuide,
     this.onPlaybackUnavailable,
+    this.onInteraction,
   });
 
   final Channel channel;
@@ -27,6 +28,7 @@ class VideoPlayerWidget extends StatefulWidget {
   final VoidCallback onNextChannel;
   final VoidCallback onShowChannelGuide;
   final ValueChanged<String>? onPlaybackUnavailable;
+  final VoidCallback? onInteraction;
 
   @override
   State<VideoPlayerWidget> createState() => VideoPlayerWidgetState();
@@ -347,6 +349,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with WidgetsBindin
       return;
     }
 
+    widget.onInteraction?.call();
     setState(() {
       _showControls = true;
     });
