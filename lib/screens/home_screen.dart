@@ -32,7 +32,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const double _channelCardWidth = 188;
+  static const double _channelCardWidth = 280;
 
   final GlobalKey<VideoPlayerWidgetState> _playerKey = GlobalKey<VideoPlayerWidgetState>();
   final ScrollController _scrollController = ScrollController();
@@ -41,7 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Timer? _channelNoticeTimer;
   Timer? _uiHideTimer;
+  Timer? _numberInputTimer;
   String? _channelNotice;
+  String _numberInput = '';
   bool _showChannelGuide = true;
   bool _uiVisible = true;
   int _focusedIndex = 0;
@@ -88,12 +90,43 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _channelNoticeTimer?.cancel();
     _uiHideTimer?.cancel();
+    _numberInputTimer?.cancel();
     for (final node in _channelFocusNodes) {
       node.dispose();
     }
     _scrollController.dispose();
     _keyboardFocusNode.dispose();
     super.dispose();
+  }
+
+  void _handleNumberKey(String digit, ChannelProvider provider) {
+    _resetUiTimer();
+    _numberInputTimer?.cancel();
+
+    setState(() {
+      _numberInput += digit;
+    });
+
+    _numberInputTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) {
+        return;
+      }
+
+      final channelNumber = int.tryParse(_numberInput);
+      if (channelNumber != null &&
+          channelNumber > 0 &&
+          channelNumber <= provider.channels.length) {
+        provider.selectChannelAt(channelNumber - 1);
+        _hideGuide();
+        _showChannelNotice('Switched to Channel $channelNumber');
+      } else if (channelNumber != null) {
+        _showChannelNotice('Channel $channelNumber not found');
+      }
+
+      setState(() {
+        _numberInput = '';
+      });
+    });
   }
 
   void _resetUiTimer() {
@@ -244,6 +277,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final key = event.logicalKey;
     final wasUiHidden = !_uiVisible;
     _resetUiTimer();
+
+    if (key.keyLabel.isNotEmpty &&
+        RegExp(r'^[0-9]$').hasMatch(key.keyLabel) &&
+        !_showChannelGuide) {
+      _handleNumberKey(key.keyLabel, provider);
+      return KeyEventResult.handled;
+    }
 
     if (wasUiHidden) {
       // If UI was hidden, the first key press just wakes it up
@@ -450,6 +490,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
+                        ),
+                      if (_numberInput.isNotEmpty)
+                        Positioned(
+                          top: 40,
+                          right: 40,
+                          child: _NumberOverlay(number: _numberInput),
                         ),
                     ],
                   ),
@@ -747,14 +793,14 @@ class _ChannelGuide extends StatelessWidget {
       child: IgnorePointer(
         ignoring: !visible,
         child: Container(
-          height: 318,
+          height: 440,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.96),
-                Colors.black.withValues(alpha: 0.84),
+                Colors.black.withValues(alpha: 0.98),
+                Colors.black.withValues(alpha: 0.88),
                 Colors.transparent,
               ],
             ),
@@ -762,24 +808,49 @@ class _ChannelGuide extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    selectedChannel?.name ?? 'Choose a channel',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        selectedChannel?.name ?? 'Choose a channel',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            'Channel ${selectedIndex + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     '$channelCount live channels available',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    style: const TextStyle(color: Colors.white70, fontSize: 18),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
                   Expanded(
                     child: ListView.builder(
                       controller: scrollController,
@@ -787,11 +858,12 @@ class _ChannelGuide extends StatelessWidget {
                       itemCount: channels.length,
                       itemBuilder: (context, index) {
                         return Padding(
-                          padding: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.only(right: 18),
                           child: _ChannelCard(
                             channel: channels[index],
                             focusNode: focusNodes[index],
                             isSelected: index == selectedIndex,
+                            index: index,
                             onFocusChange: (hasFocus) {
                               if (hasFocus) {
                                 onChannelFocused(index);
@@ -818,6 +890,7 @@ class _ChannelCard extends StatefulWidget {
     required this.channel,
     required this.focusNode,
     required this.isSelected,
+    required this.index,
     required this.onFocusChange,
     required this.onTap,
   });
@@ -825,6 +898,7 @@ class _ChannelCard extends StatefulWidget {
   final Channel channel;
   final FocusNode focusNode;
   final bool isSelected;
+  final int index;
   final ValueChanged<bool> onFocusChange;
   final VoidCallback onTap;
 
@@ -849,31 +923,31 @@ class _ChannelCardState extends State<_ChannelCard> {
         });
         widget.onFocusChange(focused);
       },
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(24),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        width: 176,
-        padding: const EdgeInsets.all(14),
+        width: 260,
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: _isFocused
               ? const Color(0xFFB71C1C)
-              : Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(20),
+              : Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: _isFocused
                 ? Colors.white
                 : widget.isSelected
                 ? Colors.redAccent.withValues(alpha: 0.85)
-                : Colors.white.withValues(alpha: 0.08),
-            width: _isFocused ? 2.8 : 1.1,
+                : Colors.white.withValues(alpha: 0.1),
+            width: _isFocused ? 3.5 : 1.5,
           ),
           boxShadow: _isFocused
               ? [
                   BoxShadow(
-                    color: Colors.redAccent.withValues(alpha: 0.28),
-                    blurRadius: 28,
-                    spreadRadius: 2,
+                    color: Colors.redAccent.withValues(alpha: 0.35),
+                    blurRadius: 32,
+                    spreadRadius: 4,
                   ),
                 ]
               : null,
@@ -882,38 +956,114 @@ class _ChannelCardState extends State<_ChannelCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                  ),
-                  child: Center(
-                    child: widget.channel.logo.isNotEmpty
-                        ? Image.network(
-                            widget.channel.logo,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                      ),
+                      child: Center(
+                        child: widget.channel.logo.isNotEmpty
+                            ? Image.network(
+                                widget.channel.logo,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.tv,
+                                    size: 64,
+                                    color: Colors.white70,
+                                  );
+                                },
+                              )
+                            : const Icon(
                                 Icons.tv,
-                                size: 44,
+                                size: 64,
                                 color: Colors.white70,
-                              );
-                            },
-                          )
-                        : const Icon(Icons.tv, size: 44, color: Colors.white70),
+                              ),
+                      ),
+                    ),
                   ),
-                ),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          '${widget.index + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Text(
               widget.channel.name,
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NumberOverlay extends StatelessWidget {
+  const _NumberOverlay({required this.number});
+
+  final String number;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white24, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black45,
+            blurRadius: 20,
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.numbers_rounded, color: Colors.redAccent, size: 40),
+            const SizedBox(width: 16),
+            Text(
+              number,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 64,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4,
               ),
             ),
           ],
