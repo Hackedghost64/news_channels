@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel.dart';
 import '../models/channel_catalog.dart';
 import '../services/channel_service.dart';
@@ -8,6 +9,7 @@ class ChannelProvider with ChangeNotifier {
     : _channelService = channelService ?? ChannelService();
 
   static const String _webProxyPrefix = 'https://corsproxy.io/?';
+  static const String _prefKeyLastChannel = 'last_channel_url';
 
   final ChannelRepository _channelService;
   List<Channel> _channels = [];
@@ -84,22 +86,27 @@ class ChannelProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final currentUrl = _selectedChannel?.url;
+      final prefs = await SharedPreferences.getInstance();
+      final savedUrl = prefs.getString(_prefKeyLastChannel);
+      final currentUrl = _selectedChannel?.url ?? savedUrl;
+
       final catalog = await _channelService.fetchChannels();
 
       _channels = catalog.channels;
       _catalogSource = catalog.source;
       _warning = catalog.warning;
 
-      if (_channels.isNotEmpty && _selectedChannel == null) {
-        _selectedChannel = _channels.first;
-      } else if (currentUrl != null) {
-        final currentIndex = _channels.indexWhere(
-          (channel) => channel.url == currentUrl,
-        );
-        _selectedChannel = currentIndex == -1
-            ? (_channels.isEmpty ? null : _channels.first)
-            : _channels[currentIndex];
+      if (_channels.isNotEmpty) {
+        if (currentUrl != null) {
+          final currentIndex = _channels.indexWhere(
+            (channel) => channel.url == currentUrl,
+          );
+          _selectedChannel = currentIndex == -1 ? _channels.first : _channels[currentIndex];
+        } else {
+          _selectedChannel = _channels.first;
+        }
+      } else {
+        _selectedChannel = null;
       }
     } catch (e) {
       _error = e.toString();
@@ -109,18 +116,22 @@ class ChannelProvider with ChangeNotifier {
     }
   }
 
-  void selectChannel(Channel channel) {
+  Future<void> selectChannel(Channel channel) async {
     _selectedChannel = channel;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefKeyLastChannel, channel.url);
   }
 
-  void selectChannelAt(int index) {
+  Future<void> selectChannelAt(int index) async {
     if (index < 0 || index >= _channels.length) {
       return;
     }
 
     _selectedChannel = _channels[index];
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefKeyLastChannel, _selectedChannel!.url);
   }
 
   void selectNextChannel() {
