@@ -410,20 +410,26 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> with WidgetsBindin
             fit: StackFit.expand,
             children: [
               ColoredBox(color: Colors.black, child: _buildVideoSurface()),
-              if (_showControls || _error != null)
-                _PlayerControlsOverlay(
-                  channelName: widget.channel.name,
-                  isPlaying: _isPlaying,
-                  isMuted: _isMuted,
-                  isLoading: _isLoading,
-                  error: _error,
-                  onPreviousChannel: widget.onPreviousChannel,
-                  onNextChannel: widget.onNextChannel,
-                  onTogglePlayback: togglePlayback,
-                  onToggleMute: _toggleMute,
-                  onRetry: _initializePlayer,
-                  onShowChannelGuide: widget.onShowChannelGuide,
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 300),
+                opacity: (_showControls || _error != null) ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !(_showControls || _error != null),
+                  child: _PlayerControlsOverlay(
+                    channelName: widget.channel.name,
+                    isPlaying: _isPlaying,
+                    isMuted: _isMuted,
+                    isLoading: _isLoading,
+                    error: _error,
+                    onPreviousChannel: widget.onPreviousChannel,
+                    onNextChannel: widget.onNextChannel,
+                    onTogglePlayback: togglePlayback,
+                    onToggleMute: _toggleMute,
+                    onRetry: _initializePlayer,
+                    onShowChannelGuide: widget.onShowChannelGuide,
+                  ),
                 ),
+              ),
               if (_isLoading && _error == null)
                 const Center(
                   child: CircularProgressIndicator(color: Colors.redAccent),
@@ -494,50 +500,50 @@ class _PlayerControlsOverlay extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.64),
+            Colors.black.withValues(alpha: 0.45),
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.72),
+            Colors.black.withValues(alpha: 0.55),
           ],
         ),
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(18),
+                  color: Colors.black.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+                    horizontal: 12,
+                    vertical: 8,
                   ),
                   child: Text(
                     channelName,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ),
               if (error != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Colors.red.shade900.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(18),
+                    color: Colors.red.shade900.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(12),
                     child: Text(
                       error!,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
                     ),
                   ),
                 ),
@@ -551,7 +557,7 @@ class _PlayerControlsOverlay extends StatelessWidget {
                     tooltip: 'Previous channel',
                     onPressed: onPreviousChannel,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   _ControlButton(
                     icon: isPlaying
                         ? Icons.pause_rounded
@@ -560,19 +566,19 @@ class _PlayerControlsOverlay extends StatelessWidget {
                     isPrimary: true,
                     onPressed: onTogglePlayback,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   _ControlButton(
                     icon: Icons.skip_next_rounded,
                     tooltip: 'Next channel',
                     onPressed: onNextChannel,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   _ControlButton(
                     icon: Icons.grid_view_rounded,
                     tooltip: 'Channel guide',
                     onPressed: onShowChannelGuide,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   _ControlButton(
                     icon: isMuted
                         ? Icons.volume_off_rounded
@@ -580,7 +586,7 @@ class _PlayerControlsOverlay extends StatelessWidget {
                     tooltip: isMuted ? 'Unmute' : 'Mute',
                     onPressed: onToggleMute,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   _ControlButton(
                     icon: Icons.refresh_rounded,
                     tooltip: 'Retry stream',
@@ -588,7 +594,7 @@ class _PlayerControlsOverlay extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
               Center(
                 child: Text(
                   error == null
@@ -596,7 +602,7 @@ class _PlayerControlsOverlay extends StatelessWidget {
                             ? 'Buffering live stream...'
                             : 'Double tap or swipe to change channel'
                       : 'Retry the stream or open the guide to switch sources.',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ),
             ],
@@ -626,16 +632,16 @@ class _ControlButton extends StatelessWidget {
       message: tooltip,
       child: Material(
         color: isPrimary
-            ? Colors.redAccent.withValues(alpha: 0.95)
-            : Colors.black.withValues(alpha: 0.62),
+            ? Colors.redAccent.withValues(alpha: 0.8)
+            : Colors.black.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(999),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onPressed,
           child: SizedBox(
-            width: isPrimary ? 68 : 56,
-            height: isPrimary ? 68 : 56,
-            child: Icon(icon, color: Colors.white, size: isPrimary ? 34 : 26),
+            width: isPrimary ? 56 : 44,
+            height: isPrimary ? 56 : 44,
+            child: Icon(icon, color: Colors.white, size: isPrimary ? 28 : 22),
           ),
         ),
       ),

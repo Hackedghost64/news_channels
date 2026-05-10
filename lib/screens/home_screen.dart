@@ -136,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _uiVisible = true;
       });
     }
-    _uiHideTimer = Timer(const Duration(seconds: 7), () {
+    _uiHideTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _uiVisible = false;
@@ -656,22 +656,22 @@ class _TopBar extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Row(
             children: [
               Expanded(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.54),
-                    borderRadius: BorderRadius.circular(22),
+                    color: Colors.black.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08),
+                      color: Colors.white.withValues(alpha: 0.05),
                     ),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                      horizontal: 14,
+                      vertical: 8,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -679,26 +679,26 @@ class _TopBar extends StatelessWidget {
                       children: [
                         Image.asset(
                           'assets/in-samsung-news-548832250.avif',
-                          height: 40,
+                          height: 32,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return const Text(
                               'News TV',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
                             );
                           },
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           provider.selectedChannel?.name ??
                               'Awaiting channel list',
                           style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70,
+                            fontSize: 12,
+                            color: Colors.white60,
                           ),
                         ),
                       ],
@@ -706,13 +706,13 @@ class _TopBar extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               _ActionChip(
                 icon: Icons.grid_view_rounded,
                 label: 'Guide',
                 onPressed: onShowGuide,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _ActionChip(
                 icon: provider.isLoading ? Icons.sync : Icons.refresh_rounded,
                 label: 'Reload',
@@ -740,19 +740,22 @@ class _ActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withValues(alpha: 0.54),
-      borderRadius: BorderRadius.circular(22),
+      color: Colors.black.withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         onTap: onPressed,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Text(label, style: const TextStyle(color: Colors.white)),
+              Icon(icon, color: Colors.white, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
             ],
           ),
         ),
@@ -793,14 +796,14 @@ class _ChannelGuide extends StatelessWidget {
       child: IgnorePointer(
         ignoring: !visible,
         child: Container(
-          height: 440,
+          height: 380,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.98),
-                Colors.black.withValues(alpha: 0.88),
+                Colors.black.withValues(alpha: 0.85),
+                Colors.black.withValues(alpha: 0.65),
                 Colors.transparent,
               ],
             ),
@@ -808,7 +811,7 @@ class _ChannelGuide extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -819,38 +822,38 @@ class _ChannelGuide extends StatelessWidget {
                         selectedChannel?.name ?? 'Choose a channel',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 32,
+                          fontSize: 26,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       DecoratedBox(
                         decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.8),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.redAccent.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
+                            horizontal: 12,
+                            vertical: 4,
                           ),
                           child: Text(
                             'Channel ${selectedIndex + 1}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
-                              fontSize: 18,
+                              fontSize: 14,
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     '$channelCount live channels available',
-                    style: const TextStyle(color: Colors.white70, fontSize: 18),
+                    style: const TextStyle(color: Colors.white60, fontSize: 14),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                   Expanded(
                     child: ListView.builder(
                       controller: scrollController,
@@ -858,7 +861,7 @@ class _ChannelGuide extends StatelessWidget {
                       itemCount: channels.length,
                       itemBuilder: (context, index) {
                         return Padding(
-                          padding: const EdgeInsets.only(right: 18),
+                          padding: const EdgeInsets.only(right: 14),
                           child: _ChannelCard(
                             channel: channels[index],
                             focusNode: focusNodes[index],
@@ -927,27 +930,27 @@ class _ChannelCardState extends State<_ChannelCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        width: 260,
-        padding: const EdgeInsets.all(18),
+        width: 220,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: _isFocused
               ? const Color(0xFFB71C1C)
-              : Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(24),
+              : Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _isFocused
                 ? Colors.white
                 : widget.isSelected
                 ? Colors.redAccent.withValues(alpha: 0.85)
-                : Colors.white.withValues(alpha: 0.1),
-            width: _isFocused ? 3.5 : 1.5,
+                : Colors.white.withValues(alpha: 0.08),
+            width: _isFocused ? 3.0 : 1.2,
           ),
           boxShadow: _isFocused
               ? [
                   BoxShadow(
-                    color: Colors.redAccent.withValues(alpha: 0.35),
-                    blurRadius: 32,
-                    spreadRadius: 4,
+                    color: Colors.redAccent.withValues(alpha: 0.28),
+                    blurRadius: 28,
+                    spreadRadius: 2,
                   ),
                 ]
               : null,
@@ -959,7 +962,7 @@ class _ChannelCardState extends State<_ChannelCard> {
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.05),
@@ -972,38 +975,38 @@ class _ChannelCardState extends State<_ChannelCard> {
                                 errorBuilder: (context, error, stackTrace) {
                                   return const Icon(
                                     Icons.tv,
-                                    size: 64,
+                                    size: 48,
                                     color: Colors.white70,
                                   );
                                 },
                               )
                             : const Icon(
                                 Icons.tv,
-                                size: 64,
+                                size: 48,
                                 color: Colors.white70,
                               ),
                       ),
                     ),
                   ),
                   Positioned(
-                    top: 8,
-                    left: 8,
+                    top: 6,
+                    left: 6,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.black.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 6,
+                          vertical: 3,
                         ),
                         child: Text(
                           '${widget.index + 1}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: 13,
                           ),
                         ),
                       ),
@@ -1012,7 +1015,7 @@ class _ChannelCardState extends State<_ChannelCard> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             Text(
               widget.channel.name,
               maxLines: 1,
@@ -1020,7 +1023,7 @@ class _ChannelCardState extends State<_ChannelCard> {
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
-                fontSize: 20,
+                fontSize: 16,
               ),
             ),
           ],
@@ -1039,31 +1042,31 @@ class _NumberOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white24, width: 2),
+        color: Colors.black.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black45,
-            blurRadius: 20,
-            spreadRadius: 5,
+            color: Colors.black38,
+            blurRadius: 16,
+            spreadRadius: 2,
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.numbers_rounded, color: Colors.redAccent, size: 40),
-            const SizedBox(width: 16),
+            const Icon(Icons.numbers_rounded, color: Colors.redAccent, size: 32),
+            const SizedBox(width: 12),
             Text(
               number,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 64,
+                fontSize: 48,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 4,
+                letterSpacing: 2,
               ),
             ),
           ],
